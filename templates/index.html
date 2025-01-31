@@ -55,7 +55,7 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 1.5rem;
+            font-size: 1.2rem;
             font-weight: 600;
             color: var(--accent-color);
         }
@@ -125,8 +125,8 @@
                 <p class="wind-gust-container">
                     <span id="wind-gust">Loading...</span> mph
                     <svg id="windArrow" viewBox="0 0 100 100" width="30" height="30">
-                        <circle cx="50" cy="50" r="45" fill="none" stroke="#e2e8f0" stroke-width="2"/>
-                        <path d="M50 10 L40 40 L50 35 L60 40 Z" fill="#3f5a36" stroke="#3f5a36" stroke-width="1"/>
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="#3f5a36" stroke-width="2"/>
+                        <path d="M50 3 L30 45 L50 40 L70 45 Z" fill="#3f5a36" stroke="#3182ce" stroke-width="1"/>
                     </svg>
                 </p>
             </div>
@@ -182,7 +182,7 @@
             cardinalDirectionText.textContent = cardinal;
 
             // Update wind gust in large arrow
-            windGustLarge.textContent = `${windGust}`;
+            windGustLarge.textContent = `${windGust.toFixed(1)}`;
         }
 
         // Listen for weather updates from the server
