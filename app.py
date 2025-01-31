@@ -49,7 +49,8 @@ def listen_for_data():
                 # Update weather_data for rapid_wind
                 weather_data = {
                     "wind_gust_mph": round(wind_gust_mph, 2),
-                    "wind_direction": cardinal_direction,
+                    "cardinal_direction": cardinal_direction,
+                    "wind_direction": wind_direction,
                     "temperature_fahrenheit": None  # No temperature data for rapid_wind
                 }
 

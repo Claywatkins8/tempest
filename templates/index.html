@@ -4,15 +4,123 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tempest Dashboard</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #2d3748;
+            --accent-color: #3f5a36;
+            --card-bg: #ffffff;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 2rem;
+            color: var(--accent-color);
+        }
+
+        #arrow-container {
+            width: 200px;
+            height: 200px;
+            margin: 2rem auto;
+            background-color: var(--card-bg);
+            border-radius: 50%;
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.3s ease;
+        }
+
+        #arrow-container:hover {
+            transform: scale(1.05);
+        }
+
+        #windArrow {
+            width: 150px;
+            height: 150px;
+            transition: transform 0.5s ease;
+        }
+
+        #weather-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .weather-card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: var(--shadow);
+            transition: transform 0.3s ease;
+        }
+
+        .weather-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .weather-card h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--accent-color);
+        }
+
+        .weather-card p {
+            font-size: 1.25rem;
+            font-weight: 400;
+            margin: 0;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <h1>Tempest Dashboard</h1>
+
+        <div id="arrow-container">
+            <svg id="windArrow" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="45" fill="none" stroke="#e2e8f0" stroke-width="2"/>
+                <path d="M50 10 L40 40 L50 35 L60 40 Z" fill="#3f5a36" stroke="#3182ce" stroke-width="1"/>
+            </svg>
+        </div>
+
         <div id="weather-info">
-            <p><strong>Wind Gust:</strong> <span id="wind-gust">Loading...</span> mph</p>
-            <p><strong>Wind Direction:</strong> <span id="wind-direction">Loading...</span></p>
-            <p><strong>Temperature:</strong> <span id="temperature">Loading...</span> °F</p>
+            <div class="weather-card">
+                <h3>Wind Gust</h3>
+                <p><span id="wind-gust">Loading...</span> mph</p>
+            </div>
+            <div class="weather-card">
+                <h3>Wind Direction</h3>
+                <p><span id="wind-direction">Loading...</span></p>
+            </div>
+            <div class="weather-card">
+                <h3>Cardinal Direction</h3>
+                <p><span id="cardinal-direction">Loading...</span></p>
+            </div>
+            <div class="weather-card">
+                <h3>Temperature</h3>
+                <p><span id="temperature">Loading...</span> °F</p>
+            </div>
         </div>
     </div>
 
@@ -23,15 +131,46 @@
         // Connect to the WebSocket server
         const socket = io();
 
+        // Function to convert cardinal direction to degrees
+        function cardinalToDegrees(cardinal) {
+            const directions = {
+                'N': 0, 'NNE': 22.5, 'NE': 45, 'ENE': 67.5,
+                'E': 90, 'ESE': 112.5, 'SE': 135, 'SSE': 157.5,
+                'S': 180, 'SSW': 202.5, 'SW': 225, 'WSW': 247.5,
+                'W': 270, 'WNW': 292.5, 'NW': 315, 'NNW': 337.5
+            };
+            return directions[cardinal] || 0;
+        }
+
+        // Function to update the wind direction arrow based on cardinal direction
+        function updateWindDirection(cardinal) {
+            const arrow = document.getElementById('windArrow');
+            const windDirectionText = document.getElementById('wind-direction');
+            const cardinalDirectionText = document.getElementById('cardinal-direction');
+
+            const degrees = cardinalToDegrees(cardinal);
+
+            // Update arrow rotation based on degrees
+            arrow.style.transform = `rotate(${degrees}deg)`;
+
+            // Update the displayed wind direction text
+            windDirectionText.textContent = `${degrees}°`;
+            cardinalDirectionText.textContent = cardinal;
+        }
+
         // Listen for weather updates from the server
         socket.on('weather_update', function(data) {
             console.log("Received weather data:", data);
 
             // Update the page with the new data
             document.getElementById("wind-gust").textContent = data.wind_gust_mph !== null ? data.wind_gust_mph : 'N/A';
-            document.getElementById("wind-direction").textContent = data.wind_direction;
-            if(data.temperature_fahrenheit != null){
+            if(data.temperature_fahrenheit !== null){
                 document.getElementById("temperature").textContent = data.temperature_fahrenheit;
+            }
+
+            // Update the wind direction arrow
+            if (data.cardinal_direction) {
+                updateWindDirection(data.cardinal_direction);
             }
         });
     </script>
