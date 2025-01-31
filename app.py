@@ -51,7 +51,11 @@ def listen_for_data():
                     "wind_gust_mph": round(wind_gust_mph, 2),
                     "cardinal_direction": cardinal_direction,
                     "wind_direction": wind_direction,
-                    "temperature_fahrenheit": None  # No temperature data for rapid_wind
+                    "temperature_fahrenheit": None,  # No temperature data for rapid_wind
+                    "humidity": None,  # No humidity data for rapid_wind
+                    "station_pressure": None,  # No station pressure data for rapid_wind
+                    "rain_inches_per_minute": None,  # No rain data for rapid_wind
+                    "uv_index": None  # No UV index data for rapid_wind
                 }
 
                 # Emit the updated weather data to the frontend using WebSocket
@@ -62,8 +66,35 @@ def listen_for_data():
                 temperature_celsius = json_data["obs"][0][7]
                 temperature_fahrenheit = (temperature_celsius * 9/5) + 32
 
-                # Update weather_data with temperature from obs_st
+                # Extract humidity from the first observation (index 8)
+                humidity = json_data["obs"][0][8]
+
+                # Extract station pressure from the first observation (index 6)
+                station_pressure = json_data["obs"][0][6]
+
+                # Extract rain inches per minute from the first observation (index 9)
+                rain_inches_per_minute = json_data["obs"][0][9]
+
+                # Extract UV index from the first observation (index 10)
+                uv_index = json_data["obs"][0][10]
+
+                # Extract wind gust, lull, and average from the first observation (index 1, 2, 3)
+                wind_lull_mps = json_data["obs"][0][1]
+                wind_lull_mph = wind_lull_mps * 2.23694
+                wind_avg_mps = json_data["obs"][0][2]
+                wind_avg_mph = wind_avg_mps * 2.23694
+                wind_gust_mps = json_data["obs"][0][3]
+                wind_gust_mph = wind_gust_mps * 2.23694
+
+                # Update weather_data with temperature, humidity, station pressure, rain, UV index, and wind data from obs_st
                 weather_data["temperature_fahrenheit"] = round(temperature_fahrenheit, 2)
+                weather_data["humidity"] = humidity
+                weather_data["station_pressure"] = station_pressure
+                weather_data["rain_inches_per_minute"] = rain_inches_per_minute
+                weather_data["uv_index"] = uv_index
+                weather_data["wind_lull_mph"] = round(wind_lull_mph, 2)
+                weather_data["wind_avg_mph"] = round(wind_avg_mph, 2)
+                weather_data["wind_gust_mph"] = round(wind_gust_mph, 2)
 
                 # Emit the updated weather data to the frontend using WebSocket
                 socketio.emit('weather_update', weather_data)

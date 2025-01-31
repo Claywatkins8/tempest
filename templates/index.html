@@ -104,6 +104,10 @@
         .wind-gust-container {
             display: flex;
             align-items: center;
+            justify-content: space-between;
+        }
+        .full-width {
+            grid-column: 1 / -1; /* This makes the item span all columns */
         }
     </style>
 </head>
@@ -120,27 +124,39 @@
         </div>
 
         <div id="weather-info">
-            <div class="weather-card">
-                <h3>Wind Gust</h3>
-                <p class="wind-gust-container">
-                    <span id="wind-gust">Loading...</span> mph
+            <div class="weather-card full-width">
+                <h3>Wind</h3>
+                <div class="wind-gust-container">
+                    <p>Gust: <span id="wind-gust">Loading...</span> mph</p>
+                    <p>Lull: <span id="wind-lull">Loading...</span> mph</p>
+                    <p>Avg: <span id="wind-avg">Loading...</span> mph</p>
+                    <p><span id="wind-direction">Loading...</span></p>
                     <svg id="windArrow" viewBox="0 0 100 100" width="30" height="30">
                         <circle cx="50" cy="50" r="45" fill="none" stroke="#3f5a36" stroke-width="2"/>
                         <path d="M50 3 L30 45 L50 40 L70 45 Z" fill="#3f5a36" stroke="#3182ce" stroke-width="1"/>
                     </svg>
-                </p>
-            </div>
-            <div class="weather-card">
-                <h3>Wind Direction</h3>
-                <p><span id="wind-direction">Loading...</span></p>
-            </div>
-            <div class="weather-card">
-                <h3>Cardinal Direction</h3>
-                <p><span id="cardinal-direction">Loading...</span></p>
+                    <p><span id="cardinal-direction">Loading...</span></p>
+                </div>
             </div>
             <div class="weather-card">
                 <h3>Temperature</h3>
                 <p><span id="temperature">Loading...</span> °F</p>
+            </div>
+            <div class="weather-card">
+                <h3>Humidity</h3>
+                <p><span id="humidity">Loading...</span> %</p>
+            </div>
+            <div class="weather-card">
+                <h3>Station Pressure</h3>
+                <p><span id="station-pressure">Loading...</span> mb</p>
+            </div>
+            <div class="weather-card">
+                <h3>Rain</h3>
+                <p><span id="rain-inches-per-minute">Loading...</span> in/min</p>
+            </div>
+            <div class="weather-card">
+                <h3>UV Index</h3>
+                <p><span id="uv_index">Loading...</span> uv</p>
             </div>
         </div>
     </div>
@@ -193,6 +209,18 @@
             document.getElementById("wind-gust").textContent = data.wind_gust_mph !== null ? data.wind_gust_mph : 'N/A';
             if(data.temperature_fahrenheit !== null){
                 document.getElementById("temperature").textContent = data.temperature_fahrenheit;
+            }
+            if(data.humidity !== null){
+                document.getElementById("humidity").textContent = data.humidity;
+            }
+            if(data.station_pressure !== null){
+                document.getElementById("station-pressure").textContent = data.station_pressure;
+            }
+            if(data.rain_inches_per_minute !== null){
+                document.getElementById("rain-inches-per-minute").textContent = data.rain_inches_per_minute;
+            }
+            if(data.uv_index !== null){
+                document.getElementById("uv_index").textContent = data.uv_index;
             }
             // Update the wind direction arrows
             if (data.cardinal_direction) {
