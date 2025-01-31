@@ -2,135 +2,116 @@ import socket
 import json
 import os
 import struct
-from dotenv import load_dotenv
-import time
+from flask import Flask, render_template, jsonify
 from threading import Thread
+import time
 
-# Load environment variables from .env file
-load_dotenv()
+# Initialize Flask app
+app = Flask(__name__)
 
-class TempestWeather:
-    def __init__(self, hub_ip: str, hub_port: int = 50222):
-        """Initialize with Hub IP address and port."""
-        self.hub_ip = hub_ip
-        self.hub_port = hub_port
-        self.multicast_group = "239.255.255.250"
-        
-    def listen_for_data(self):
-        """Listen for UDP multicast data from Tempest Hub."""
-        # Create the socket
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-        
-        # Set the socket to allow broadcast and reuse address/port
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)  # Allow reuse of port
-        
-        # Bind to the multicast group address
-        sock.bind(("", self.hub_port))
-        
-        # Join the multicast group
-        group = socket.inet_aton(self.multicast_group)
-        mreq = struct.pack("4sL", group, socket.INADDR_ANY)
-        sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
-        
-        try:
-            while True:
-                # Receive data from the hub (increased buffer size to 4096 bytes)
-                data, address = sock.recvfrom(4096)
-                
-                # Debugging: Print the raw data
-                # print(f"Received raw data: {data}")
-                
-                # Decode and process the data (usually JSON format)
-                try:
-                    json_data = json.loads(data.decode('utf-8'))
-                    # Check for specific message types and process accordingly
-                    if json_data.get("type") == "rapid_wind":
-                        self.process_wind_gust_data(json_data)
-                    elif json_data.get("type") == "obs_st":
-                        self.process_weather_data(json_data)
-                except json.JSONDecodeError as e:
-                    print(f"Error decoding JSON data: {e}")
-            
-        except KeyboardInterrupt:
-            print("Listening for data stopped by user")
-        finally:
-            sock.close()
+# Initialize weather data (will be updated with the latest data)
+weather_data = {
+    "wind_gust_mph": 0,
+    "wind_direction": "N",
+    "temperature_fahrenheit": 0
+}
 
-    def process_wind_gust_data(self, data):
-        """Process and display wind gust data in Imperial units, with cardinal direction."""
-        if "ob" in data:
-            # Extract wind gust speed and wind direction (in m/s and degrees)
-            wind_gust_mps = data["ob"][1]  # Wind gust in meters per second
-            wind_gust_direction = data["ob"][2]  # Wind direction in degrees
-            
-            # Convert wind gust speed from m/s to mph
-            wind_gust_mph = wind_gust_mps * 2.23694  # Correct conversion factor
+# Multicast group and port for Tempest Hub
+MULTICAST_GROUP = "239.255.255.250"
+PORT = 50222
 
-            # Convert wind direction in degrees to cardinal direction
-            cardinal_direction = self.get_cardinal_direction(wind_gust_direction)
+def listen_for_data():
+    """Listen for UDP multicast data from Tempest Hub and update weather_data."""
+    global weather_data
 
-            print("<---------------------------->")
-            print(f"Wind Gust: {wind_gust_mph:.2f} mph - {wind_gust_direction}-{cardinal_direction} ")
-            print("<---------------------------->")
-    
-    def get_cardinal_direction(self, degrees):
-        """Convert wind direction in degrees to cardinal direction."""
-        cardinal_directions = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", 
-                            "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
-        cardinal_index = round(degrees / 22.5) % 16  # Round and get the index in the list
-        return cardinal_directions[cardinal_index]
-    
-    def process_weather_data(self, data):
-        """Process and display general weather data (e.g., wind avg, temperature)."""
-        if "obs" in data:
-            obs_data = data["obs"][0]  # Get the first observation (latest data)
-            
-            # Parse the weather data
-            timestamp = obs_data[0]
-            wind_avg_mps = obs_data[2]
-            air_temperature_celsius = obs_data[7]
-            
-            # Convert units to Imperial:
-            # Wind speed (m/s to mph)
-            wind_avg_mph = wind_avg_mps * 2.237
-            
-            # Air temperature (Celsius to Fahrenheit)
-            air_temperature_fahrenheit = (air_temperature_celsius * 9/5) + 32
-            
-            # Convert the timestamp from epoch seconds to human-readable format
-            from datetime import datetime
-            timestamp = datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
-            
-            # Print out the weather data
-            print(f"Timestamp: {timestamp}")
-            print(f"Wind Avg: {wind_avg_mph:.1f} mph")
-            print(f"Air Temperature: {air_temperature_fahrenheit:.1f}°F")
-            print("----------------------------")
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+    sock.bind(("", PORT))
 
-# Run the UDP listener in a separate thread
-def main():
-    # Get the Hub IP from the environment variable
-    hub_ip = os.getenv("TEMPEST_HUB_IP")
-    
-    if not hub_ip:
-        print("Please set TEMPEST_HUB_IP in your .env file")
-        return
-    
-    # Create weather object
-    weather = TempestWeather(hub_ip)
-    
-    # Start listening for data in a separate thread
-    listening_thread = Thread(target=weather.listen_for_data)
-    listening_thread.daemon = True
-    listening_thread.start()
-    
-    # Run other tasks (e.g., additional data processing or logging)
+    group = socket.inet_aton(MULTICAST_GROUP)
+    mreq = struct.pack("4sL", group, socket.INADDR_ANY)
+    sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+
     try:
         while True:
-            time.sleep(1)  # Keep the main thread alive
+            data, _ = sock.recvfrom(4096)
+            # print(f"Raw Data Received: {data}")  # Log raw data for debugging
+
+            json_data = json.loads(data.decode('utf-8'))
+
+            if json_data.get("type") == "rapid_wind":
+                # Process rapid_wind data (wind gust and direction)
+                wind_gust_mps = json_data["ob"][1]
+                wind_gust_mph = wind_gust_mps * 2.23694
+                wind_direction = json_data["ob"][2]
+                cardinal_direction = get_cardinal_direction(wind_direction)
+
+                # Update weather_data for rapid_wind
+                weather_data = {
+                    "wind_gust_mph": round(wind_gust_mph, 2),
+                    "wind_direction": cardinal_direction,
+                    #"temperature_fahrenheit": None  # No temperature data for rapid_wind
+                }
+
+                # Debugging: Print the updated weather data
+                #print(f"Updated Weather Data (rapid_wind): {weather_data}")
+
+            elif json_data.get("type") == "obs_st":
+                
+                # Log the raw temperature in Celsius before conversion
+                #print(f"Raw Temperature (Celsius): {json_data['obs'][0][7]}")
+
+                # Extract temperature from the first observation (index 7)
+                temperature_celsius = json_data["obs"][0][7]
+                temperature_fahrenheit = (temperature_celsius * 9/5) + 32
+
+                # Log the temperature in Fahrenheit after conversion
+                #print(f"Temperature (Fahrenheit): {temperature_fahrenheit}")
+
+                # Update weather_data with temperature from obs_st
+                weather_data["temperature_fahrenheit"] = round(temperature_fahrenheit, 2)
+
+                # Debugging: Print the updated weather data
+                #print(f"Updated Weather Data (obs_st): {weather_data}")
+
+
     except KeyboardInterrupt:
-        print("Main program stopped by user")
+        print("Data listening stopped.")
+    finally:
+        sock.close()
+
+
+
+
+
+
+def get_cardinal_direction(degrees):
+    """Convert wind direction in degrees to cardinal direction."""
+    cardinal_directions = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", 
+                           "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
+    cardinal_index = round(degrees / 22.5) % 16
+    return cardinal_directions[cardinal_index]
+
+@app.route('/')
+def index():
+    """Render the main page."""
+    return render_template('index.html')
+
+
+@app.route('/weather_data')
+def get_weather_data():
+    """Return the latest weather data in JSON format."""
+    print(f"Sending Weather Data: {weather_data}")  # Debugging print to verify data
+    return jsonify(weather_data)
+
+
 
 if __name__ == "__main__":
-    main()
+    # Start the data listener in a separate thread
+    data_thread = Thread(target=listen_for_data)
+    data_thread.daemon = True
+    data_thread.start()
+
+    # Run the Flask server
+    app.run(debug=True, host="0.0.0.0", port=8081)

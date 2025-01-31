@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Weather Dashboard</h1>
+        <div id="weather-info">
+            <p><strong>Wind Gust:</strong> <span id="wind-gust">Loading...</span> mph</p>
+            <p><strong>Wind Direction:</strong> <span id="wind-direction">Loading...</span></p>
+            <p><strong>Temperature:</strong> <span id="temperature">Loading...</span> °F</p>
+        </div>
+    </div>
+
+    <script>
+        function fetchWeatherData() {
+            fetch("/weather_data")
+                .then(response => response.json())
+                .then(data => {
+                    // Debugging: Log the data received from the server
+                    //console.log("Received weather data:", data);
+        
+                    document.getElementById("wind-gust").textContent = data.wind_gust_mph;
+                    document.getElementById("wind-direction").textContent = data.wind_direction;
+                    if(data.temperature_fahrenheit != null){
+                        document.getElementById("temperature").textContent = data.temperature_fahrenheit;  // Update the temperature
+                        console.log("Temp changed")
+                    }
+                })
+                .catch(error => console.log("Error fetching weather data:", error));
+        }
+        
+        // Fetch the weather data every 2 seconds
+        setInterval(fetchWeatherData, 2000);
+        
+        // Initial fetch to populate the data immediately
+        fetchWeatherData();
+    </script>
+</body>
+</html>
