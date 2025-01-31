@@ -37,6 +37,29 @@
             color: var(--accent-color);
         }
 
+        #large-arrow-container {
+            width: 200px;
+            height: 200px;
+            margin: 2rem auto;
+            position: relative;
+        }
+
+        #largeWindArrow {
+            width: 100%;
+            height: 100%;
+            transition: transform 0.5s ease;
+        }
+
+        #wind-gust-large {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--accent-color);
+        }
+
         #weather-info {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -88,16 +111,23 @@
     <div class="container">
         <h1>Tempest Dashboard</h1>
 
+        <div id="large-arrow-container">
+            <svg id="largeWindArrow" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="45" fill="none" stroke="#e2e8f0" stroke-width="2"/>
+                <path d="M50 10 L40 40 L50 35 L60 40 Z" fill="#3f5a36" stroke="#3f5a36" stroke-width="1"/>
+            </svg>
+            <div id="wind-gust-large">--</div>
+        </div>
+
         <div id="weather-info">
             <div class="weather-card">
                 <h3>Wind Gust</h3>
                 <p class="wind-gust-container">
-                    <span id="wind-gust">Loading...</span>  mph
+                    <span id="wind-gust">Loading...</span> mph
                     <svg id="windArrow" viewBox="0 0 100 100" width="30" height="30">
-                        <circle cx="50" cy="50" r="45" fill="none" stroke="#3f5a36" stroke-width="2"/>
-                        <path d="M50 3 L30 45 L50 40 L70 45 Z" fill="#3f5a36" stroke="#3182ce" stroke-width="1"/>
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="#e2e8f0" stroke-width="2"/>
+                        <path d="M50 10 L40 40 L50 35 L60 40 Z" fill="#3f5a36" stroke="#3f5a36" stroke-width="1"/>
                     </svg>
-                    
                 </p>
             </div>
             <div class="weather-card">
@@ -110,7 +140,7 @@
             </div>
             <div class="weather-card">
                 <h3>Temperature</h3>
-                <p><span id="temperature">Loading...</span>°F</p>
+                <p><span id="temperature">Loading...</span> °F</p>
             </div>
         </div>
     </div>
@@ -133,20 +163,26 @@
             return directions[cardinal] || 0;
         }
 
-        // Function to update the wind direction arrow based on cardinal direction
-        function updateWindDirection(cardinal) {
-            const arrow = document.getElementById('windArrow');
+        // Function to update the wind direction arrows based on cardinal direction
+        function updateWindDirection(cardinal, windGust) {
+            const largeArrow = document.getElementById('largeWindArrow');
+            const smallArrow = document.getElementById('windArrow');
             const windDirectionText = document.getElementById('wind-direction');
             const cardinalDirectionText = document.getElementById('cardinal-direction');
+            const windGustLarge = document.getElementById('wind-gust-large');
 
             const degrees = cardinalToDegrees(cardinal);
 
-            // Update arrow rotation based on degrees
-            arrow.style.transform = `rotate(${degrees}deg)`;
+            // Update arrow rotations based on degrees
+            largeArrow.style.transform = `rotate(${degrees}deg)`;
+            smallArrow.style.transform = `rotate(${degrees}deg)`;
 
             // Update the displayed wind direction text
             windDirectionText.textContent = `${degrees}°`;
             cardinalDirectionText.textContent = cardinal;
+
+            // Update wind gust in large arrow
+            windGustLarge.textContent = `${windGust}`;
         }
 
         // Listen for weather updates from the server
@@ -158,10 +194,9 @@
             if(data.temperature_fahrenheit !== null){
                 document.getElementById("temperature").textContent = data.temperature_fahrenheit;
             }
-
-            // Update the wind direction arrow
+            // Update the wind direction arrows
             if (data.cardinal_direction) {
-                updateWindDirection(data.cardinal_direction);
+                updateWindDirection(data.cardinal_direction, data.wind_gust_mph);
             }
         });
     </script>
