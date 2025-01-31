@@ -58,18 +58,28 @@ class TempestWeather:
             sock.close()
 
     def process_wind_gust_data(self, data):
-        """Process and display wind gust data in Imperial units."""
+        """Process and display wind gust data in Imperial units, with cardinal direction."""
         if "ob" in data:
+            # Extract wind gust speed and wind direction (in m/s and degrees)
             wind_gust_mps = data["ob"][1]  # Wind gust in meters per second
-            wind_gust_direction = data["ob"][2]  # Wind gust in meters per second
+            wind_gust_direction = data["ob"][2]  # Wind direction in degrees
             
-            # Convert to Imperial units (m/s to mph)
-            wind_gust_mph = wind_gust_mps * 2.23694
-            
-            # Print the wind gust data
+            # Convert wind gust speed from m/s to mph
+            wind_gust_mph = wind_gust_mps * 2.23694  # Correct conversion factor
+
+            # Convert wind direction in degrees to cardinal direction
+            cardinal_direction = self.get_cardinal_direction(wind_gust_direction)
+
             print("<---------------------------->")
-            print(f"Wind Gust: {wind_gust_mph:.1f} mph - {wind_gust_direction} ")
+            print(f"Wind Gust: {wind_gust_mph:.2f} mph - {wind_gust_direction}-{cardinal_direction} ")
             print("<---------------------------->")
+    
+    def get_cardinal_direction(self, degrees):
+        """Convert wind direction in degrees to cardinal direction."""
+        cardinal_directions = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", 
+                            "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
+        cardinal_index = round(degrees / 22.5) % 16  # Round and get the index in the list
+        return cardinal_directions[cardinal_index]
     
     def process_weather_data(self, data):
         """Process and display general weather data (e.g., wind avg, temperature)."""
