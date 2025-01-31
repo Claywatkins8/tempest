@@ -1,13 +1,14 @@
+from flask import Flask, render_template
+from flask_socketio import SocketIO, emit
 import socket
 import json
 import os
 import struct
-from flask import Flask, render_template, jsonify
 from threading import Thread
-import time
 
-# Initialize Flask app
+# Initialize Flask app and Flask-SocketIO
 app = Flask(__name__)
+socketio = SocketIO(app)
 
 # Initialize weather data (will be updated with the latest data)
 weather_data = {
@@ -36,8 +37,6 @@ def listen_for_data():
     try:
         while True:
             data, _ = sock.recvfrom(4096)
-            # print(f"Raw Data Received: {data}")  # Log raw data for debugging
-
             json_data = json.loads(data.decode('utf-8'))
 
             if json_data.get("type") == "rapid_wind":
@@ -51,40 +50,27 @@ def listen_for_data():
                 weather_data = {
                     "wind_gust_mph": round(wind_gust_mph, 2),
                     "wind_direction": cardinal_direction,
-                    #"temperature_fahrenheit": None  # No temperature data for rapid_wind
+                    "temperature_fahrenheit": None  # No temperature data for rapid_wind
                 }
 
-                # Debugging: Print the updated weather data
-                #print(f"Updated Weather Data (rapid_wind): {weather_data}")
+                # Emit the updated weather data to the frontend using WebSocket
+                socketio.emit('weather_update', weather_data)
 
             elif json_data.get("type") == "obs_st":
-                
-                # Log the raw temperature in Celsius before conversion
-                #print(f"Raw Temperature (Celsius): {json_data['obs'][0][7]}")
-
                 # Extract temperature from the first observation (index 7)
                 temperature_celsius = json_data["obs"][0][7]
                 temperature_fahrenheit = (temperature_celsius * 9/5) + 32
 
-                # Log the temperature in Fahrenheit after conversion
-                #print(f"Temperature (Fahrenheit): {temperature_fahrenheit}")
-
                 # Update weather_data with temperature from obs_st
                 weather_data["temperature_fahrenheit"] = round(temperature_fahrenheit, 2)
 
-                # Debugging: Print the updated weather data
-                #print(f"Updated Weather Data (obs_st): {weather_data}")
-
+                # Emit the updated weather data to the frontend using WebSocket
+                socketio.emit('weather_update', weather_data)
 
     except KeyboardInterrupt:
         print("Data listening stopped.")
     finally:
         sock.close()
-
-
-
-
-
 
 def get_cardinal_direction(degrees):
     """Convert wind direction in degrees to cardinal direction."""
@@ -98,20 +84,11 @@ def index():
     """Render the main page."""
     return render_template('index.html')
 
-
-@app.route('/weather_data')
-def get_weather_data():
-    """Return the latest weather data in JSON format."""
-    print(f"Sending Weather Data: {weather_data}")  # Debugging print to verify data
-    return jsonify(weather_data)
-
-
-
 if __name__ == "__main__":
     # Start the data listener in a separate thread
     data_thread = Thread(target=listen_for_data)
     data_thread.daemon = True
     data_thread.start()
 
-    # Run the Flask server
-    app.run(debug=True, host="0.0.0.0", port=8081)
+    # Run the Flask server with WebSocket support
+    socketio.run(app, debug=True, host="0.0.0.0", port=8081)

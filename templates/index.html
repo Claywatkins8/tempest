@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weather Dashboard</title>
+    <title>Tempest Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <div class="container">
-        <h1>Weather Dashboard</h1>
+        <h1>Tempest Dashboard</h1>
         <div id="weather-info">
             <p><strong>Wind Gust:</strong> <span id="wind-gust">Loading...</span> mph</p>
             <p><strong>Wind Direction:</strong> <span id="wind-direction">Loading...</span></p>
@@ -16,29 +16,24 @@
         </div>
     </div>
 
+    <!-- WebSocket Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.2/socket.io.min.js"></script>
+
     <script>
-        function fetchWeatherData() {
-            fetch("/weather_data")
-                .then(response => response.json())
-                .then(data => {
-                    // Debugging: Log the data received from the server
-                    //console.log("Received weather data:", data);
-        
-                    document.getElementById("wind-gust").textContent = data.wind_gust_mph;
-                    document.getElementById("wind-direction").textContent = data.wind_direction;
-                    if(data.temperature_fahrenheit != null){
-                        document.getElementById("temperature").textContent = data.temperature_fahrenheit;  // Update the temperature
-                        console.log("Temp changed")
-                    }
-                })
-                .catch(error => console.log("Error fetching weather data:", error));
-        }
-        
-        // Fetch the weather data every 2 seconds
-        setInterval(fetchWeatherData, 2000);
-        
-        // Initial fetch to populate the data immediately
-        fetchWeatherData();
+        // Connect to the WebSocket server
+        const socket = io();
+
+        // Listen for weather updates from the server
+        socket.on('weather_update', function(data) {
+            console.log("Received weather data:", data);
+
+            // Update the page with the new data
+            document.getElementById("wind-gust").textContent = data.wind_gust_mph !== null ? data.wind_gust_mph : 'N/A';
+            document.getElementById("wind-direction").textContent = data.wind_direction;
+            if(data.temperature_fahrenheit != null){
+                document.getElementById("temperature").textContent = data.temperature_fahrenheit;
+            }
+        });
     </script>
 </body>
 </html>
